@@ -1,3 +1,7 @@
+typedef unsigned char  u8;
+typedef unsigned short u16;
+typedef unsigned int   u32;
+
 struct ext2_inode {
 	u16	i_mode;		/* File mode */
 	u16	i_uid;		/* Owner Uid */
