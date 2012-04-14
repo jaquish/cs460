@@ -1,7 +1,7 @@
 #ifndef EXT2_H
 #define EXT2_H
 
-#include my_types.h
+#include "my_types.h"
 
 struct ext2_inode {
 	u16	i_mode;		/* File mode */

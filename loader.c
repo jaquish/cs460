@@ -1,6 +1,6 @@
 // 3. Implement YOUR loader.c
        
-load(pathname, segment) char *pathname; ushort segment;
+load(pathname, segment) char *pathname; u16 segment;
 {
 
 }
@@ -27,7 +27,7 @@ load(pathname, segment) char *pathname; ushort segment;
 ///***********************************
 ///        COPIED FROM BOOTLOADER 
 ///***********************************
-
+/*
 
 // load the block containing that inode# into the inode_buf, return pointer to that inode
 e2_inode* load_inode(i) int i;

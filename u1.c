@@ -3,7 +3,7 @@
 main()
 {
   char name[64];
-  ushort segment;
+  u16 segment;
 
   printf("\nThis is u1 running\n");
   while(1){

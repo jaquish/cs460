@@ -1,9 +1,10 @@
+#include "my_types.h"
 #include "ext2.h"           // EXT2 INODE, DIR struct types
 #include "io.c"             // YOUR printf() with "%c %s %d %x %l\n";
 #include "loader.c"         // YOUR loader.c file
 
 char filename[64];
-ushort segment;
+u16 segment;
 
 main()
 {
@@ -13,7 +14,7 @@ main()
     gets(filename);
     segment = 0x2000;  // choose a free segment
     if (load(filename, segment)){
-      printf("jmp to segment %s\n", segment\n");
+      printf("jmp to segment %s\n", segment);
       go(segment);
     }
     else{
