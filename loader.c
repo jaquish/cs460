@@ -1,7 +1,16 @@
 // 3. Implement YOUR loader.c
-       
+
 load(pathname, segment) char *pathname; u16 segment;
 {
+	char* name = pathname;
+	char* next = name;
+
+	while(1)
+	{
+		
+	}
+	
+
 
 }
 
