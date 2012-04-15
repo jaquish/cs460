@@ -33,18 +33,6 @@ int put_word(word, segment, offset) u16 word; u16 segment; u16 offset;
 	return 1;
 }
 
-void get_block(blk, buf) int blk; char buf[];
-{
-    /*
-    //convert blk to (cyl,head,sector);
-    u16 cyl = blk / 18;
-    u16 head = (blk / 9) % 2;
-    u16 sector = (blk * 2) % 18 ;
-    */
-
-    diskr(blk / 18, (blk / 9) % 2, (blk * 2) % 18, buf);
-}
-
 //                       String I/O Functions
 
 /* gets(char s[ ]) : inputs a string from the keyboard, where s[ ] is a 
@@ -120,12 +108,12 @@ printf(fmt) char *fmt;  // arg list should follow fmt on stack
 {                                 
       // upon entry, stack contains :| bp | PC | fmt | args .....=>(HIGH)
       //                               bp 
-      
+      /* TODOFAOSF
     u16  *bp = getbp();   // getbp() returns current stack frame pointer bp
     char *cp = *(bp + 2); // cp = fmt
     u16  *ip =  (bp + 3); // ip point at first arg
-
+      */
       // use cp to scan fmt, output each char until %X, where X=c|s|d|u|x|o|l.
       // call printX(*(Xtype *)ip) to print the current arg by X type;
       // advance ip to point at the next arg on stack, etc.
-}
+} 

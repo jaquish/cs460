@@ -1,4 +1,3 @@
-#include "my_types.h"
 #include "ext2.h"           // EXT2 INODE, DIR struct types
 #include "io.c"             // YOUR printf() with "%c %s %d %x %l\n";
 #include "loader.c"         // YOUR loader.c file
