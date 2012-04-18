@@ -1,19 +1,32 @@
-// 3. Implement YOUR loader.c
-
-load(pathname, segment) char *pathname; u16 segment;
+char load(pathname, segment) char *pathname; u16 segment;
 {
-	char* name = pathname;
-	char* next = name;
+
+	// SUPER BLOCK PRINT
+	// GROUP BLOCK PRINT
+
+	char* p1 = pathname;
+	char* p2 = p1;
+	int str_len;
 
 	while(1)
 	{
-		
+		str_len = 0;
+
+		while( *p2 != '\0' && *p2 != '/' )
+		{
+			p2++;
+			str_len++;
+		}
+
+		if (str_len == 0)
+			break;
+
+
 	}
-	
-
-
+	printf("success\n");
 }
 
+/*
 //    {
 //       1. break up pathname into tokens:
 //          /a/b/c/d  ==> "a", "b", "c", "d" with n=4

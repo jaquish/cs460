@@ -1,39 +1,27 @@
-/*
-                       I/O Functions.
-
-   Based on getc() and putc() of BIOS, we can implement the following simple
-   terminal I/O functions for MTX.
-
-1.1. 
-*/
-
 #include "my_types.h"
+
+/*                         I/O Functions.                     */
 
 u16 get_word(segment, offset) u16 segment; u16 offset;
 {
-	putc('G');
-	putc('W');
-	putc('\n');
+	char left  = get_byte(segment, offset);
+	char right = get_byte(segment, offset + 1);
 
-	// get_byte();
-	// get_byte();
+  u16 merge = ((left << 8) & 0xF0) & right;
 
-	return 1;
+	return merge;
 }
 
-int put_word(word, segment, offset) u16 word; u16 segment; u16 offset;
+void put_word(word, segment, offset) u16 word; u16 segment; u16 offset;
 {
-	putc('P');
-	putc('W');
-	putc('\n');
+  char left  = (word >> 8) & 0x0F;
+  char right = word & 0x0F;
 
-	// put_byte();
-	// put_byte();
-
-	return 1;
+  put_byte(left , segment, offset);
+  put_byte(right, segment, offset + 1);
 }
 
-//                       String I/O Functions
+/*                       String I/O Functions                 */
 
 /* gets(char s[ ]) : inputs a string from the keyboard, where s[ ] is a 
      memory area with enough space for the incoming string.  */
@@ -53,6 +41,7 @@ int prints(s) char *s;
 }
 
 char *table = "0123456789ABCDEF";
+int BASE = 10;
 
 /*
    The function rpu(x) recursively generates the digits of x % 10 and 
@@ -63,6 +52,7 @@ char *table = "0123456789ABCDEF";
 
 int printu(x) u16 x;
 {
+  BASE = 10;
 	if (x==0)
        putc('0');
     else
@@ -72,25 +62,57 @@ int printu(x) u16 x;
 
 int rpu(x) u16 x;
 {
-    u8 c;
-    if (x){
-    c = table[x % 10];
-        rpu(x / 10);
-    }
+  u8 c;
+  if (x){
+    c = table[x % BASE];
+    rpu(x / BASE);
     putc(c);
+  }
 }
 
-int printd(x) int x;
+int printx(x) u16 x;
 {
-    if (x<0){
-        putc('-');
-        x = -x;
-    }
+  BASE = 16;
+  rpu((u32)x);
+}
+
+int printl(x) u32 x;
+{
+  BASE = 10;
+  if (x==0)
+    putc('0');
+  else
+    rpl((u32)x);
+  putc(' ');
+}
+
+int rpl(x) u32 x;
+{
+  u8 c;
+  if (x){
+    c = table[x % BASE];
+    rpl( (u32)(x / BASE) );
+    putc(c);
+  }
+}
+
+int printX(x) u32 x;
+{
+  BASE = 16;
+  rpl((u32)x);
+}
+
+int printi(x) int x;
+{
+  if (x<0) {
+    putc('-');
+    x = -x;
+  }
     printu(x);
 }
 
    /*
-   By changing the divde-mod base to 16, we can implement printx(x) to print
+   By changing the divide-mod base to 16, we can implement printx(x) to print
    in HEX. Similarly, by changing the type to u32, we can print long values,
    etc.
    */
@@ -103,17 +125,31 @@ int printd(x) int x;
      %o, %l, etc. Instead of showing the actual code, it suffices to explain 
      the algorithm of printf().
      */
-   
-printf(fmt) char *fmt;  // arg list should follow fmt on stack  
-{                                 
-      // upon entry, stack contains :| bp | PC | fmt | args .....=>(HIGH)
-      //                               bp 
-      /* TODOFAOSF
-    u16  *bp = getbp();   // getbp() returns current stack frame pointer bp
-    char *cp = *(bp + 2); // cp = fmt
-    u16  *ip =  (bp + 3); // ip point at first arg
-      */
-      // use cp to scan fmt, output each char until %X, where X=c|s|d|u|x|o|l.
-      // call printX(*(Xtype *)ip) to print the current arg by X type;
-      // advance ip to point at the next arg on stack, etc.
-} 
+
+
+int printf(fmt) char *fmt;
+{
+  char *cp = fmt;              // cp points at the fmt string
+  u16  *ip = (int *)&fmt + 1;  // ip points at first item to be printed on stack
+  u32  *up;
+  while (*cp){
+    if (*cp != '%'){
+        putc(*cp);
+        if (*cp=='\n')
+          putc('\r');
+        cp++;
+        continue;
+    }
+    cp++;
+    switch(*cp){
+      case 'c' : putc  (*ip); break;
+      case 's' : prints(*ip); break;
+      case 'u' : printu(*ip); break;
+      case 'd' : printi(*ip); break;
+      case 'x' : printx(*ip); break;
+      case 'l' : printl(*(u32 *)ip++); break; 
+      case 'X' : printX(*(u32 *)ip++); break; 
+    }
+    cp++; ip++;
+  }
+}

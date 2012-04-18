@@ -4,7 +4,6 @@
 #	- io.c
 #	- ext2.h
 
-
 #regen disk with my bootloaders
 echo regenerating floppy with my bootloader
 ./make_booter.sh
@@ -21,8 +20,8 @@ as86 -o ./build/u1_s.o   u1.s
 
 #link
 echo linking
-ld86 -o ./out/sos -d ./build/sos_s.o ./build/sos_c.o /usr/lib/bcc/libc.a
-ld86 -o ./out/u1  -s ./build/u1_s.o  ./build/u1_c.o  /usr/lib/bcc/libc.a
+ld86 -d -o ./out/sos ./build/sos_s.o ./build/sos_c.o /usr/lib/bcc/libc.a
+ld86 -d -o ./out/u1  ./build/u1_s.o  ./build/u1_c.o  /usr/lib/bcc/libc.a
 
 #copy files into image
 echo copy sos and u1 to mtximage

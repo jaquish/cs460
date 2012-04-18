@@ -101,7 +101,7 @@ _inces:                         ! inces() inc ES by 0x40, or 1K
 
 _go:  ! go(segment)
         push   bp
-        mov    bp,sp       ! if you saw mov sp,bp; it's an OBVIOUS ERROR
+        mov    bp,sp       ! if you saw mov sp,bp; its an OBVIOUS ERROR
         mov    ax,4[bp]
         mov    segment,ax
 

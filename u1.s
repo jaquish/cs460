@@ -1,6 +1,8 @@
 .globl begtext, begdata, begbss                      ! needed by linker
 
 .globl _getc,_putc                                   ! EXPORT
+.globl _get_byte,_put_byte                           ! EXPORT (needed but unused)
+
 .globl _main,_prints                                 ! IMPORT these 
 
 .text                                                ! these tell as:	
@@ -45,3 +47,45 @@ _putc:
 
         pop    bp
 	ret
+
+
+! NEEDED BUT UNUSED - functions in io.c depend on them, we just need printf from io.c
+!*===========================================================================*
+!*                              get_byte                                     *
+!*===========================================================================*
+! c = get_byte(segment, offset)
+_get_byte:
+        push bp                 ! save bp
+        mov bp,sp               ! stack frame pointer
+        push es                 ! save es
+
+        mov es,4[bp]            ! load es with segment value
+        mov bx,6[bp]            ! load bx with offset from segment
+        seg es                  ! go get the byte
+        movb al,[bx]            ! al = byte
+        xorb ah,ah              ! ax = byte
+
+        pop es                  ! restore es
+        pop bp                  ! restore bp
+        ret                     ! return to caller
+
+!*===========================================================================*
+!*                              put_byte                                     *
+!*===========================================================================*
+! put_byte(char,segment,offset)
+_put_byte:
+        push bp                 ! save bp
+        mov  bp,sp              ! stack frame pointer
+        push es                 ! save es
+        push bx
+
+        mov  es,6[bp]           ! load es with seg value
+        mov  bx,8[bp]           ! load bx with offset from segment
+        movb al,4[bp]           ! load byte in aL
+        seg  es                 ! go put the byte to [ES, BX]
+        movb [bx],al            ! there it goes
+
+        pop  bx                 ! restore bx
+        pop  es                 ! restore es
+        pop  bp                 ! restore bp
+        ret                     ! return to caller
