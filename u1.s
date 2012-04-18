@@ -1,6 +1,6 @@
 .globl begtext, begdata, begbss                      ! needed by linker
 
-.globl _getc,_putc                                   ! EXPORT
+.globl _getc,_putc, _diskr                           ! EXPORT
 .globl _get_byte,_put_byte                           ! EXPORT (needed but unused)
 
 .globl _main,_prints                                 ! IMPORT these 
@@ -89,3 +89,37 @@ _put_byte:
         pop  es                 ! restore es
         pop  bp                 ! restore bp
         ret                     ! return to caller
+
+       !---------------------------------------
+       ! diskr(cyl, head, sector, buf)  all count from 0
+       !        4     6     8      10
+       !---------------------------------------
+_diskr:                             
+        push  bp
+        mov   bp,sp            ! bp = stack frame pointer
+
+        movb  dl, #0x00        ! drive 0=FD0
+        movb  dh, 6[bp]        ! head
+        movb  cl, 8[bp]        ! sector
+        incb  cl               ! inc sector by 1 to suit BIOS
+        movb  ch, 4[bp]        ! cyl
+        mov   bx, 10[bp]       ! BX=buf ==> memory addr=(ES,BX)
+        mov   ax, #0x0202      ! READ 2 sectors to (EX, BX)
+        
+        int  0x13              ! call BIOS to read the block 
+        jb   _error            ! to error if CarryBit is on [read failed]
+
+        pop  bp                
+        ret
+
+        !------------------------------
+        !       error & reboot
+        !------------------------------
+_error:
+        mov  bx, #bad
+        push bx
+        call _prints
+        
+        int  0x19                       ! reboot
+
+bad:    .asciz  "Error!\n\r"

@@ -153,3 +153,15 @@ int printf(fmt) char *fmt;
     cp++; ip++;
   }
 }
+
+void get_block(blk, buf) int blk; char buf[];
+{
+    /*
+    //convert blk to (cyl,head,sector);
+    u16 cyl = blk / 18;
+    u16 head = (blk / 9) % 2;
+    u16 sector = (blk * 2) % 18 ;
+     */
+
+    diskr(blk / 18, (blk / 9) % 2, (blk * 2) % 18, buf);
+}

@@ -1,12 +1,55 @@
+void print_super()
+{
+	char buffer[1024];
+
+	struct ext2_super_block* super = buffer;
+
+	get_block(1,buffer);
+
+	printf("*******************************\n");
+	printf("          Super Block          \n");
+	printf("*******************************\n");
+	printf("s_inodes_count: %l\n", super->s_inodes_count);
+	printf("s_blocks_count: %l\n", super->s_blocks_count);
+	printf("s_free_blocks_count: %l\n", super->s_free_blocks_count);
+	printf("s_free_inodes_count: %l\n", super->s_free_inodes_count);
+	printf("s_first_data_block: %l\n", super->s_first_data_block);
+	printf("s_magic (should be EF53): %x\n", super->s_magic);
+	printf("s_first_ino: %l\n\n", super->s_first_ino);
+}
+
+void print_group()
+{
+	char buffer[1024];
+
+	struct ext2_group_desc* group = buffer;
+
+	get_block(2,buffer);
+
+	printf("*******************************\n");
+	printf("          Group Block          \n");
+	printf("*******************************\n");	
+	printf("bg_block_bitmap: %l\n", group->bg_block_bitmap);
+	printf("bg_inode_bitmap: %l\n", group->bg_inode_bitmap);
+	printf("bg_inode_table: %l\n", group->bg_inode_table);
+	printf("bg_free_blocks_count: %u\n", group->bg_free_blocks_count);
+	printf("bg_free_inodes_count: %u\n", group->bg_free_inodes_count);
+	printf("bg_used_dirs_count: %u\n\n", group->bg_used_dirs_count);
+}
+
 char load(pathname, segment) char *pathname; u16 segment;
 {
 
 	// SUPER BLOCK PRINT
 	// GROUP BLOCK PRINT
+	
 
 	char* p1 = pathname;
 	char* p2 = p1;
 	int str_len;
+
+	print_super();
+	print_group();
 
 	while(1)
 	{
