@@ -37,6 +37,106 @@ void print_group()
 	printf("bg_used_dirs_count: %u\n\n", group->bg_used_dirs_count);
 }
 
+// Search for 
+u32 dir_entry_of_inode(s) char* s;
+{
+	
+}
+
+// The function prototype is f(buf, bytes) char* buf; u32 bytes;
+void func_over_datablocks(func, inode_n, out) void (*func)(); u32 inode_n; void* out;
+{
+	struct ext2_inode inode_buf[8];
+	struct ext2_inode* inode;
+	int loop;	// counter
+	u32 bytes_left;
+
+	// load the inode into a buffer
+	inode_n--;
+
+    get_block( ( inode_n / 8 ) + FIRST_INODE_BLOCK , &inode_buf);
+    inode = &inode_buf[inode_n % 8];
+
+	bytes_left = inode->i_size;
+
+	for(loop = 0; loop < 4; loop++)	// four loops: for direct, indirect, 2x indirect, 3x indirect
+	{
+		int d_blocks = 12;
+		int ind_blocks = 0;
+		int ind2_blocks = 0;
+		int ind3_blocks = 0;
+
+		// pointers to lists of (in)direct blocks (at first)
+		u32 *d_list    = &inode->i_block[0];
+		u32 *ind_list  = &inode->i_block[12];
+		u32 *ind2_list = &inode->i_block[13];
+		u32 *ind3_list = &inode->i_block[14];
+
+		// 4K of buffers....
+		char d_buffer[1024];
+		u32 ind_buffer[256];
+		u32 ind2_buffer[256];
+		u32 ind3_buffer[256];
+
+		// loop counters
+		int d, i, i2, i3;	
+
+		switch(i) {
+			default:
+				break;
+
+			case 1:
+				ind_blocks = 1;
+				d_blocks = 256;
+				break;
+
+			case 2:
+				ind2_blocks = 1;
+				ind_blocks = 256;
+				break;
+
+			case 3:
+				ind3_blocks = 1;
+				ind2_blocks = 256;
+				break;
+		}
+
+		for (i3 = 0; i3 < ind3_blocks; i3++)
+		{
+			// LOAD i3 block into buffer
+			get_block(*ind3_list, ind3_buffer);
+			ind2_list = ind3_buffer;
+
+			for (i2 = 0; i2 < ind2_blocks; i2++)
+			{
+				get_block(ind2_list[i2], ind2_buffer);
+				ind_list = ind2_buffer;
+
+				for (i = 0; i < ind_blocks; i++)
+				{
+					get_block(ind_list[i], ind_buffer);
+					d_list = ind_buffer;
+
+					for(d = 0; d < d_blocks; d++)
+					{
+						u32 found_inode = 0;
+						u32 good_bytes = BLOCK_SIZE;
+						if (bytes_left < BLOCK_SIZE)
+							good_bytes = bytes_left;
+
+						get_block(d_list[d], d_buffer);
+
+						func(d_buffer, good_bytes, &found_inode);
+
+						if (found_inode > 0)
+							1;
+					}
+				}
+			}
+		}
+	}
+}
+
 char load(pathname, segment) char *pathname; u16 segment;
 {
 
@@ -46,7 +146,14 @@ char load(pathname, segment) char *pathname; u16 segment;
 
 	char* p1 = pathname;
 	char* p2 = p1;
+
 	int str_len;
+
+	if (*p1 == '/')	// if absolute path
+	{
+		p1++;
+		p2++;
+	}
 
 	print_super();
 	print_group();
@@ -61,8 +168,21 @@ char load(pathname, segment) char *pathname; u16 segment;
 			str_len++;
 		}
 
-		if (str_len == 0)
+		if (str_len == 0){
 			break;
+
+		} else {
+			*p2 = '\0';
+			printf("filepiece is: %s \n", p1);
+			
+			{
+				u32 next_inode;
+				func_over_datablocks(dir_entry_of_inode, next_inode, &next_inode);
+			}
+
+			p2++;
+			p1 = p2;
+		}
 
 
 	}

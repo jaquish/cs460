@@ -3,6 +3,14 @@
 
 #include "my_types.h"
 
+#define BLOCK_SIZE 1024
+#define BOOT_BLOCK 0
+#define SUPER_BLOCK 1
+#define GROUP_BLOCK 2
+#define BMAP_BLOCK  3
+#define IMAP_BLOCK  4
+#define FIRST_INODE_BLOCK 5
+
 
 struct ext2_super_block 
 {
