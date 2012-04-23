@@ -4,6 +4,8 @@
 #include "my_types.h"
 
 #define BLOCK_SIZE 1024
+
+#define ROOT_INODE 2
 #define BOOT_BLOCK 0
 #define SUPER_BLOCK 1
 #define GROUP_BLOCK 2

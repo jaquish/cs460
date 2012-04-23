@@ -26,6 +26,15 @@ void put_word(word, segment, offset) u16 word; u16 segment; u16 offset;
 /* gets(char s[ ]) : inputs a string from the keyboard, where s[ ] is a 
      memory area with enough space for the incoming string.  */
 
+u16 str_len(str) char *str;
+{
+  char *s;
+
+  for (s = str; *s; ++s);
+
+  return(s - str);
+}
+
 int gets(s) char s[ ];  
 {
 	while( (*s = getc()) != '\r'){

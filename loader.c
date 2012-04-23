@@ -37,36 +37,29 @@ void print_group()
 	printf("bg_used_dirs_count: %u\n\n", group->bg_used_dirs_count);
 }
 
-// Search for 
-u32 dir_entry_of_inode(s) char* s;
-{
-	
-}
-
-// The function prototype is f(buf, bytes) char* buf; u32 bytes;
-void func_over_datablocks(func, inode_n, out) void (*func)(); u32 inode_n; void* out;
+// 
+void func_over_data(func, inode_n) int (*func)(); u32 inode_n; 
 {
 	struct ext2_inode inode_buf[8];
 	struct ext2_inode* inode;
-	int loop;	// counter
 	u32 bytes_left;
+	int i, j;	// counter
+	char data_buf[1024];
 
-	// load the inode into a buffer
-	inode_n--;
-
-    get_block( ( inode_n / 8 ) + FIRST_INODE_BLOCK , &inode_buf);
+	// 1) Load the inode 
+	inode_n--;	// inodes count from 1
+	get_block( ( inode_n / 8 ) + FIRST_INODE_BLOCK , &inode_buf);
     inode = &inode_buf[inode_n % 8];
-
 	bytes_left = inode->i_size;
 
-	for(loop = 0; loop < 4; loop++)	// four loops: for direct, indirect, 2x indirect, 3x indirect
+	for(i = 0; i < 4; i++)	// four loops: for direct, indirect, 2x indirect, 3x indirect
 	{
 		int d_blocks = 12;
 		int ind_blocks = 0;
 		int ind2_blocks = 0;
 		int ind3_blocks = 0;
 
-		// pointers to lists of (in)direct blocks (at first)
+		// pointers to lists of (in)direct blocks
 		u32 *d_list    = &inode->i_block[0];
 		u32 *ind_list  = &inode->i_block[12];
 		u32 *ind2_list = &inode->i_block[13];
@@ -78,8 +71,7 @@ void func_over_datablocks(func, inode_n, out) void (*func)(); u32 inode_n; void*
 		u32 ind2_buffer[256];
 		u32 ind3_buffer[256];
 
-		// loop counters
-		int d, i, i2, i3;	
+		int d, i, i2, i3;	// loop counters
 
 		switch(i) {
 			default:
@@ -87,16 +79,19 @@ void func_over_datablocks(func, inode_n, out) void (*func)(); u32 inode_n; void*
 
 			case 1:
 				ind_blocks = 1;
+				ind_list = &inode->i_block[12];
 				d_blocks = 256;
 				break;
 
 			case 2:
 				ind2_blocks = 1;
+				ind2_list  = &inode->i_block[13];
 				ind_blocks = 256;
 				break;
 
 			case 3:
 				ind3_blocks = 1;
+				ind3_list   = &inode->i_block[14];
 				ind2_blocks = 256;
 				break;
 		}
@@ -119,17 +114,18 @@ void func_over_datablocks(func, inode_n, out) void (*func)(); u32 inode_n; void*
 
 					for(d = 0; d < d_blocks; d++)
 					{
-						u32 found_inode = 0;
-						u32 good_bytes = BLOCK_SIZE;
-						if (bytes_left < BLOCK_SIZE)
-							good_bytes = bytes_left;
+						u16 valid_bytes = 1024;
+						if (bytes_left < valid_bytes) 
+							valid_bytes = bytes_left;
 
-						get_block(d_list[d], d_buffer);
+						func(ind_buffer[i], valid_bytes);
 
-						func(d_buffer, good_bytes, &found_inode);
+						if(func(d_buffer, valid_bytes) == 0)	// func can trigger early end, to stop unnecessary extra work
+							return;
 
-						if (found_inode > 0)
-							1;
+						bytes_left -= valid_bytes;
+						if (bytes_left == 0)
+							return;
 					}
 				}
 			}
@@ -137,28 +133,61 @@ void func_over_datablocks(func, inode_n, out) void (*func)(); u32 inode_n; void*
 	}
 }
 
+
+
+// THIS FUNCTION COMPLIES WITH FUNC_OVER_DATA
+static char* search_str;
+
+u32 search(block_n, block_bytes) u32 block_n; u16 block_bytes;
+{
+	// NOTE: assumes that directory files only use direct blocks
+
+    // search for name string in the data blocks of this INODE
+    // if found, return name's inumber
+    // else      return 0
+
+	char data_buf[1024];
+	char* d;	// use a char* so we can move it in 1-byte increments, then do dir = d;
+	struct ext2_dir_entry_2 *dir = d;
+
+	get_block(block_n, data_buf);
+
+	while(block_bytes)	// iterate over dir entries
+	{
+		if (dir->name_len == str_len(search_str) && strncmp(dir->name, search_str, dir->name_len))
+		{
+			// Found it
+			return 0;	// tell func_over_data() to stop
+		}
+
+		block_bytes -= dir->rec_len;
+		d += dir->rec_len;
+		dir = (struct ext2_dir_entry_2 *)d;
+	}
+
+	return 1;	// tell func_over_data() to continue
+}
+
 char load(pathname, segment) char *pathname; u16 segment;
 {
-
-	// SUPER BLOCK PRINT
-	// GROUP BLOCK PRINT
-	
-
 	char* p1 = pathname;
 	char* p2 = p1;
 
 	int str_len;
+	u32 next_inode;
 
 	if (*p1 == '/')	// if absolute path
 	{
+		next_inode = ROOT_INODE;
 		p1++;
 		p2++;
+
+	} else {
+		printf("FAIL– RELATIVE PATH\n");
+		exit(1);
 	}
 
-	print_super();
-	print_group();
-
-	while(1)
+	while(1)	// iterate over pieces of name
 	{
 		str_len = 0;
 
@@ -173,176 +202,20 @@ char load(pathname, segment) char *pathname; u16 segment;
 
 		} else {
 			*p2 = '\0';
+
 			printf("filepiece is: %s \n", p1);
+
+			func_over_data(search, next_inode);
 			
-			{
-				u32 next_inode;
-				func_over_datablocks(dir_entry_of_inode, next_inode, &next_inode);
-			}
+			// TODO: check for failure
 
 			p2++;
 			p1 = p2;
 		}
-
-
 	}
+
+	// ok, we have the inode
+
+
 	printf("success\n");
 }
-
-/*
-//    {
-//       1. break up pathname into tokens:
-//          /a/b/c/d  ==> "a", "b", "c", "d" with n=4
- 
-//       2. locate the inode of /a/b/c/d: let ip->INODE of file 
-//          return 0 if can't find the file
-
-//       3. read file header to get size information;
-//          print tsize, dsize, bsize
-
-//       3. load a.out data blocks (with header) into segment.
-//          move the executable part (|code|dat|....) upward 32 bytes to
-//          eliminate the header.
-
-//       4. Clear bss section (after |code|data|) to 0.
-
-//       5. return 1 for success.
-
-
-///***********************************
-///        COPIED FROM BOOTLOADER 
-///***********************************
-/*
-
-// load the block containing that inode# into the inode_buf, return pointer to that inode
-e2_inode* load_inode(i) int i;
-{
-    i--;
-    // calculate correct block
-    get_block( ( i / 8 ) + INODE_B1 , &inode_buf);
-    return &inode_buf[i % 8];
-}
-
-// pathleft = remaining filepath string, inode = inode of directory
-int find_file(pathleft, inode_n) char* pathleft; int inode_n;
-{
-    int i;
-    int blockleft;
-    e2_inode* inode;
-    
-    // pop off next directory/file from pathleft string into nextdir
-    char* cp_next = nextdir;
-    
-    pathleft++; // get past '/'
-    
-    while( (*pathleft != '/') && (*pathleft != '\0') ) {
-        *cp_next = *pathleft;
-        cp_next++;
-        pathleft++;
-    }
-    *cp_next = '\0';
-    
-    inode = load_inode(inode_n);
-        
-    for (i = 0; i < 13; i++)
-    {
-        dir_entry* dir; // dir entry pointer
-        
-        // check that block exists
-        int datablock = inode->i_block[i];
-        
-        if (datablock == 0) {
-            error();
-        }
-            
-        // load block
-        get_block(datablock, &data_buf);
-        
-        // get pointers to iterate over dir_entries
-        dir = (dir_entry*)data_buf;
-        
-        // iterate 
-        blockleft = BLOCK_SIZE;
-        while(blockleft > 0) {
-            
-            // compare name to nextdir
-            char* sp = dir->name;
-            char* np = nextdir;
-            
-            // NEED TO TRACK ELAPSED LENGTH
-            int size = dir->name_len;
-            //prints("filename:");
-            
-            while (*sp == *np && dir->name_len > 0) {
-                if (*(np+1) == '\0') {  // both at end, match made
-                    
-                    if (pathleft[0] == '\0') {
-                        //prints("found!\n\r");
-                        return dir->inode;
-                        
-                    } else {
-                        return find_file(pathleft, dir->inode);
-                    }
-                }
-                sp++;
-                np++;
-            }
-                        
-            // increment
-            blockleft -= dir->rec_len;
-            dir = &data_buf[BLOCK_SIZE-blockleft];
-        }
-        
-        // wasn't in that block, try the next
-    }
-    return 0;
-}
-
-
-int main()
-{   
-    e2_inode* inode;
-    int i;
-    long* lp;
-
-    prints("file:");
-    my_strcpy(filename, my_gets());
-    
-    // set to default if user doesn't enter string
-     
-    if (filename[0] == '\0') {
-        my_strcpy(filename,"/boot/mtx");
-    }
-    
-    // get inode of file requested
-    inode = load_inode(find_file(filename, ROOT_INDEX));
-    
-    i = inode->i_block[12];
-    
-    // load indirect block before messing with segments
-    if (i != 0) {
-        get_block(i, indirect);
-    }
-    
-    setes(KERNEL_ADDR);  // start loading here
-    
-    lp = inode->i_block;
-    for (i = 0; i < 12; i++) {
-        get_block(lp[i], 0);
-        inces();
-    }
-    
-    lp = indirect;
-    while (*lp != 0) {
-        //putc('Z');
-        get_block(*lp, 0);
-        inces();
-        lp++;
-    }
-    
-    
-    
-    return 1;
-}
-
-*/
