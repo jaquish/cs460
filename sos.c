@@ -13,7 +13,7 @@ main()
     gets(filename);
     segment = 0x2000;  // choose a free segment
     if (load(filename, segment)){
-      printf("jmp to segment %s\n", segment);
+      printf("jmp to segment %x\n", segment);
       go(segment);
     }
     else{

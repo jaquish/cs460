@@ -1,9 +1,10 @@
 #include "io.c"
 
-int func(data) char* data;
+int func(data1, data2) char* data1; char* data2;
 {
 	printf("func()\n");
-	printf("data: %s\n", data);
+	printf("data: %s\n", data1);
+	printf("data2: %s\n", data2);
 	return 7;
 }
 
@@ -12,7 +13,7 @@ void func_over_data(func, data) int (*func)(); char* data;
 {
 	int ret_val;
 	printf("func_over_data()\n");
-	ret_val = func(data);
+	ret_val = func(data, "DATA 2");
 	printf("func() returned: %d\n", ret_val);
 }
 

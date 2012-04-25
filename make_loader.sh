@@ -21,7 +21,7 @@ as86 -o ./build/u1_s.o   u1.s
 #link
 echo linking
 ld86 -d -o ./out/sos ./build/sos_s.o ./build/sos_c.o /usr/lib/bcc/libc.a
-ld86 -d -o ./out/u1  ./build/u1_s.o  ./build/u1_c.o  /usr/lib/bcc/libc.a
+ld86 -i -s -o ./out/u1  ./build/u1_s.o  ./build/u1_c.o  /usr/lib/bcc/libc.a
 
 #copy files into image
 echo copy sos and u1 to mtximage

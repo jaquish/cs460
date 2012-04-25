@@ -37,108 +37,112 @@ void print_group()
 	printf("bg_used_dirs_count: %u\n\n", group->bg_used_dirs_count);
 }
 
-// 
-void func_over_data(func, inode_n) int (*func)(); u32 inode_n; 
+void func_over_data(func, inode_n) int (*func)(); u16 inode_n;
 {
 	struct ext2_inode inode_buf[8];
 	struct ext2_inode* inode;
 	u32 bytes_left;
-	int i, j;	// counter
+	int loop, i, j;	// counter
 	char data_buf[1024];
+	
 
-	// 1) Load the inode 
+	printf("func_over_data()\n");
+	// 1) Load the inode
+
+	inode = get_inode(inode_n, inode_buf);
+
+	/*
 	inode_n--;	// inodes count from 1
-	get_block( ( inode_n / 8 ) + FIRST_INODE_BLOCK , &inode_buf);
+
+	get_block( ( inode_n / 8 ) + FIRST_INODE_BLOCK , inode_buf);
+
     inode = &inode_buf[inode_n % 8];
+	*/
+
 	bytes_left = inode->i_size;
 
-	for(i = 0; i < 4; i++)	// four loops: for direct, indirect, 2x indirect, 3x indirect
+	for(loop = 0; loop < 4; loop++)	// four loops: for direct, indirect, 2x indirect, 3x indirect
 	{
-		int d_blocks = 12;
-		int ind_blocks = 0;
-		int ind2_blocks = 0;
-		int ind3_blocks = 0;
-
 		// pointers to lists of (in)direct blocks
-		u32 *d_list    = &inode->i_block[0];
-		u32 *ind_list  = &inode->i_block[12];
-		u32 *ind2_list = &inode->i_block[13];
-		u32 *ind3_list = &inode->i_block[14];
+		u32 *ind1  = &inode->i_block[0];	// point to an indirect  block, a list of direct blocks
+		u32 *ind2  = &inode->i_block[12];	// point to an indirect2 block, a list of indirect blocks
+		u32 *ind3  = &inode->i_block[13];	// point to an indirect3 block, a list of indirect2 blocks
+
+		int ind1_size = 12;
+		int ind2_size = 1;
+		int ind3_size = 1;
 
 		// 4K of buffers....
-		char d_buffer[1024];
-		u32 ind_buffer[256];
+		u32 ind1_buffer[256];
 		u32 ind2_buffer[256];
 		u32 ind3_buffer[256];
 
-		int d, i, i2, i3;	// loop counters
+		int i1, i2, i3;
 
-		switch(i) {
-			default:
-				break;
+		printf("func loop\n");
+
+		switch(loop) {
+			case 0:
+				goto INDIRECT_1;
 
 			case 1:
-				ind_blocks = 1;
-				ind_list = &inode->i_block[12];
-				d_blocks = 256;
-				break;
+				ind1 = ind1_buffer;
+				ind1_size = 256;
+
+				goto INDIRECT_2;
 
 			case 2:
-				ind2_blocks = 1;
-				ind2_list  = &inode->i_block[13];
-				ind_blocks = 256;
-				break;
+				ind2 = ind2_buffer;
+				ind2_size = 256;
+
+				goto INDIRECT_3;
 
 			case 3:
-				ind3_blocks = 1;
-				ind3_list   = &inode->i_block[14];
-				ind2_blocks = 256;
-				break;
+				ind3 = ind3_buffer;
+				ind3_size = 256;
+				// Fall through
 		}
 
-		for (i3 = 0; i3 < ind3_blocks; i3++)
+
+		// LOAD i3 block into buffer
+		get_block(inode->i_block[14], ind3_buffer);
+
+		INDIRECT_3:
+		for (i3 = 0; i3 < ind3_size; i3++)
 		{
-			// LOAD i3 block into buffer
-			get_block(*ind3_list, ind3_buffer);
-			ind2_list = ind3_buffer;
+			get_block(ind3[i3], ind2_buffer);
 
-			for (i2 = 0; i2 < ind2_blocks; i2++)
+			INDIRECT_2:
+			for (i2 = 0; i2 < ind2_size; i2++)
 			{
-				get_block(ind2_list[i2], ind2_buffer);
-				ind_list = ind2_buffer;
+				get_block(ind2[i2], ind1_buffer);
 
-				for (i = 0; i < ind_blocks; i++)
+				INDIRECT_1:
+				for(i1 = 0; i1 < ind1_size; i1++)
 				{
-					get_block(ind_list[i], ind_buffer);
-					d_list = ind_buffer;
+					u16 valid_bytes = 1024;
+					if (bytes_left < valid_bytes) 
+						valid_bytes = bytes_left;
 
-					for(d = 0; d < d_blocks; d++)
-					{
-						u16 valid_bytes = 1024;
-						if (bytes_left < valid_bytes) 
-							valid_bytes = bytes_left;
+					printf("ind1[i]=%u and valid_bytes=%u\n", (u16)ind1[i], valid_bytes);
 
-						func(ind_buffer[i], valid_bytes);
+					if(func((u16)ind1[i], valid_bytes) == 0)	// func can trigger early end, to stop unnecessary extra work
+						return;
 
-						if(func(d_buffer, valid_bytes) == 0)	// func can trigger early end, to stop unnecessary extra work
-							return;
-
-						bytes_left -= valid_bytes;
-						if (bytes_left == 0)
-							return;
-					}
+					bytes_left -= valid_bytes;
+					if (bytes_left == 0)
+						return;
 				}
 			}
 		}
 	}
 }
 
-
-
 // THIS FUNCTION COMPLIES WITH FUNC_OVER_DATA
-static char* search_str;
+static char* search_input;	// search str
+static u16  search_output;	// search found inode number
 
-u32 search(block_n, block_bytes) u32 block_n; u16 block_bytes;
+u16 search(block_n, block_bytes) u16 block_n; u16 block_bytes;
 {
 	// NOTE: assumes that directory files only use direct blocks
 
@@ -147,34 +151,124 @@ u32 search(block_n, block_bytes) u32 block_n; u16 block_bytes;
     // else      return 0
 
 	char data_buf[1024];
-	char* d;	// use a char* so we can move it in 1-byte increments, then do dir = d;
+	char* d = data_buf;	// use a char* so we can move it in 1-byte increments, then do dir = d;
 	struct ext2_dir_entry_2 *dir = d;
 
+	printf("search() with input:%s block_n:%u and block_bytes:%d\n", search_input, block_n, block_bytes);
+
 	get_block(block_n, data_buf);
+	printf("got block\n");
 
 	while(block_bytes)	// iterate over dir entries
 	{
-		if (dir->name_len == str_len(search_str) && strncmp(dir->name, search_str, dir->name_len))
+		int i;
+		char* n = dir->name;
+		printf("dir_entry:");
+		for (i = 0; i < dir->name_len; ++i)
 		{
-			// Found it
+			printf("%c", dir->name[i]);
+		}
+		printf(" has inode: %u\n", dir->inode);
+
+		if ( dir->name_len == str_len(search_input) && (strncmp(dir->name, search_input, dir->name_len) == 0 ))
+		{
+			// found it
+			search_output = dir->inode;
 			return 0;	// tell func_over_data() to stop
 		}
 
 		block_bytes -= dir->rec_len;
 		d += dir->rec_len;
-		dir = (struct ext2_dir_entry_2 *)d;
+		dir = d;
 	}
 
-	return 1;	// tell func_over_data() to continue
+	return 1;	// tell func_over_data() to continue if there is more data
 }
 
-char load(pathname, segment) char *pathname; u16 segment;
+static u16 load_block_count;
+
+typedef struct file_header {
+	u32 space_type;		// 0 0x04100301 //(combined I,D space) or 0x04200301=(separate I,D space)
+    u32 magic_type;    	// 1 0x00000020
+    u32 text_size;		// 2 text size  // code size         
+    u32 data_size;	    // 3 data size  // initialized data size
+    u32 bss_size;	    // 4 bss  size  // uninitialized data size ==> cleared to 0
+    u32 zero;		    // 5 0x00000000
+    u32 total_mem;	    // 6 total memory      // ignore this field
+    u32 symbol_size;    // 7 symbolTable size  // symbol Table size
+} file_header;
+
+void print_file_header(fh) file_header* fh;
 {
+	printf("*******************************\n");
+	printf("          File Header          \n");
+	printf("*******************************\n");
+	
+	if      (fh->space_type == 0x04100301)	printf("1 - combined I,D space\n");
+	else if (fh->space_type == 0x04200301)  printf("1 - seperate I,D space\n");
+	else									printf("1 - ERROR: no space type, got %X\n", (u32)fh->space_type);
+	
+	if (fh->magic_type == 0x00000020) {
+		printf("2 - Magic type matches: %X\n", fh->magic_type);
+	} else {
+		printf("2 - ERROR: magic doesn't match\n");
+	}
+
+	printf("3 - text_size: %l\n", (u32)fh->text_size);
+	printf("4 - data_size: %l\n", (u32)fh->data_size);
+	printf("5 - bss_size: %l\n", (u32)fh->bss_size);
+
+	if (fh->zero == 0x00000000) {
+		printf("6 - Zero matches\n");
+	} else {
+		printf("6 - ERROR: expected zero value\n");
+	}
+
+	printf("7 - total_mem: %l\n", (u32)fh->total_mem);
+	printf("8 - symbol_size: %l\n\n", (u32)fh->symbol_size);	
+	return;
+}
+
+static u16 load_offset;
+u16 load_block(block_n, block_bytes) u16 block_n; u16 block_bytes;
+{
+	u16 segment, offset;
+	char block_buf[1024];
+	char* load_point = block_buf;
+
+	get_block(block_n, block_buf);
+
+	printf("load_block() with block_n:%u and block_bytes:%d\n", block_n, block_bytes);
+
+	if (load_block_count == 0)
+	{
+		print_file_header(block_buf);
+		load_point += 32;
+		block_bytes -= 32;
+	}
+
+	while(block_bytes > 0) 
+	{
+		printf("block_bytes:%u\n", block_bytes);
+		put_byte(load_point, 0x2000, load_offset);
+		load_point++;
+		block_bytes--;
+		load_offset++;
+	}
+
+	load_block_count++;
+	return 1;
+}
+
+
+int load(pathname, segment) char *pathname; u16 segment;
+{
+	
 	char* p1 = pathname;
 	char* p2 = p1;
 
 	int str_len;
-	u32 next_inode;
+	u16 next_inode;
 
 	if (*p1 == '/')	// if absolute path
 	{
@@ -184,7 +278,7 @@ char load(pathname, segment) char *pathname; u16 segment;
 
 	} else {
 		printf("FAIL– RELATIVE PATH\n");
-		exit(1);
+		return -1;
 	}
 
 	while(1)	// iterate over pieces of name
@@ -205,9 +299,18 @@ char load(pathname, segment) char *pathname; u16 segment;
 
 			printf("filepiece is: %s \n", p1);
 
+			search_input = p1;					// set func_over_data input
+			search_output = 0;
 			func_over_data(search, next_inode);
 			
-			// TODO: check for failure
+			// check for failure
+			if (search_output != 0) {
+				next_inode = search_output;
+				printf("Next inode is: %u \n", next_inode);
+			} else {
+				printf("FAIL!\n");
+				return -1;	// failure
+			}
 
 			p2++;
 			p1 = p2;
@@ -215,7 +318,12 @@ char load(pathname, segment) char *pathname; u16 segment;
 	}
 
 	// ok, we have the inode
-
+	{
+		load_block_count = 0;
+		load_offset = 0;
+		func_over_data(load_block, next_inode);
+	}
 
 	printf("success\n");
+	return 1;
 }
