@@ -42,7 +42,7 @@ void func_over_data(func, inode_n) int (*func)(); u16 inode_n;
 	struct ext2_inode inode_buf[8];
 	struct ext2_inode* inode;
 	u32 bytes_left;
-	int loop, i, j;	// counter
+	int loop;	// counter
 	char data_buf[1024];
 	
 
@@ -124,9 +124,9 @@ void func_over_data(func, inode_n) int (*func)(); u16 inode_n;
 					if (bytes_left < valid_bytes) 
 						valid_bytes = bytes_left;
 
-					printf("ind1[i]=%u and valid_bytes=%u\n", (u16)ind1[i], valid_bytes);
+					printf("ind1[i1]=%u and valid_bytes=%u\n", (u16)ind1[i1], valid_bytes);
 
-					if(func((u16)ind1[i], valid_bytes) == 0)	// func can trigger early end, to stop unnecessary extra work
+					if(func((u16)ind1[i1], valid_bytes) == 0)	// func can trigger early end, to stop unnecessary extra work
 						return;
 
 					bytes_left -= valid_bytes;
@@ -185,7 +185,6 @@ u16 search(block_n, block_bytes) u16 block_n; u16 block_bytes;
 	return 1;	// tell func_over_data() to continue if there is more data
 }
 
-static u16 load_block_count;
 
 typedef struct file_header {
 	u32 space_type;		// 0 0x04100301 //(combined I,D space) or 0x04200301=(separate I,D space)
@@ -219,7 +218,7 @@ void print_file_header(fh) file_header* fh;
 	printf("5 - bss_size: %l\n", (u32)fh->bss_size);
 
 	if (fh->zero == 0x00000000) {
-		printf("6 - Zero matches\n");
+		printf("6 - (0x00000000)\n");
 	} else {
 		printf("6 - ERROR: expected zero value\n");
 	}
@@ -230,6 +229,8 @@ void print_file_header(fh) file_header* fh;
 }
 
 static u16 load_offset;
+static u16 load_block_count;
+
 u16 load_block(block_n, block_bytes) u16 block_n; u16 block_bytes;
 {
 	u16 segment, offset;
@@ -247,14 +248,27 @@ u16 load_block(block_n, block_bytes) u16 block_n; u16 block_bytes;
 		block_bytes -= 32;
 	}
 
+	setes(0x2000);
+	{
+		int i;
+		for (i = 0; i < load_block_count; i++) {
+			inces();
+		}
+			
+	}
+	get_block(block_n,0);
+
+	setes(0x1000);
+	/*
 	while(block_bytes > 0) 
 	{
 		printf("block_bytes:%u\n", block_bytes);
-		put_byte(load_point, 0x2000, load_offset);
+		put_byte(*load_point, 0x2000, load_offset);
 		load_point++;
 		block_bytes--;
 		load_offset++;
 	}
+	*/
 
 	load_block_count++;
 	return 1;
