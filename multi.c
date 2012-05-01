@@ -6,6 +6,9 @@
 #define DEAD      0                /* proc status     */
 #define READY     1      
 #define FREE      2
+#define SLEEP     3
+#define ZOMBIE    4
+#define RUNNING   5
 
 #define NULL 0
 
@@ -16,6 +19,8 @@ typedef struct proc{
            int p_pid;             /* pid of parent process */
            int status;            /* READY|DEAD, etc */
            int priority;          /* from 0 -> intMAX */
+           int event;             /* for sleep/wake */
+           int exitValue;         // self-explanatory
            int kstack[SSIZE];     // kmode stack of task
 }PROC;
 
@@ -23,6 +28,7 @@ PROC proc[NPROC];
 PROC* running;
 PROC* freeList;
 PROC* readyQueue;
+PROC* sleepList;
 
 int  procSize = sizeof(PROC);
 
@@ -52,6 +58,7 @@ int initialize()
     p = &proc[i];
     p->next = &proc[i+1];
     p->pid = i;
+    p->p_pid = 0;
     p->status = FREE;
     p->priority = 1;
   }
@@ -66,6 +73,8 @@ int initialize()
   proc[NPROC-1].next = NULL;
 
   readyQueue = NULL;
+
+  sleepList = NULL;
 
   printf("initialization complete\n"); 
 }
@@ -91,7 +100,31 @@ void printQ()
 {
   printf("Running: ");       printQueue(running);
   printf("Ready Queue:");    printQueue(readyQueue);
-  printf("FreeList:");       printQueue(freeList);   printf("\n");
+  printf("FreeList:");       printQueue(freeList);   
+  printf("Sleep:");          printQueue(sleepList); printf("\n");
+}
+
+void printProcStatuses()
+{
+  int i;
+  printf("***** Process Status ***** \n");
+
+  for (i = 0; i < NPROC; ++i)
+  {
+    PROC* p = &proc[i];
+    printf("pid=%d ppid=%d status=", p->pid, p->p_pid);
+    switch(p->status) {
+      case RUNNING: printf("RUNNING");             break;
+      case READY:   printf("READY");               break;
+      case SLEEP:   printf("SLEEP(%d)", p->event); break;
+      case ZOMBIE:  printf("ZOMBIE");              break;
+      case FREE:    printf("FREE");                break;
+      case DEAD:    printf("DEAD");                break;
+      default:      printf("ERROR");               break;
+    }
+    printf("\n");
+  }
+  printf("\n");
 }
 
 // enqueue based on priority (if two have the same priority, the oldest process gets priority)
@@ -102,10 +135,6 @@ void enqueue(new_proc, queue) PROC* new_proc; PROC** queue;
   // handle edge cases, 1) empty queue and 2) higher priority than first element
   if (*queue == NULL || new_proc->priority > (*queue)->priority) {
     PROC* old_head = *queue;
-
-        printf("EDGE CASE\n");
-
-
     *queue = new_proc;
     new_proc->next = old_head;
     return;
@@ -132,7 +161,7 @@ void enqueue(new_proc, queue) PROC* new_proc; PROC** queue;
 PROC* dequeue(queue) PROC** queue;
 {
   PROC* p = *queue;
-    printf("dequeue()\n");
+  printf("dequeue()\n");
 
   if (*queue != NULL)
     *queue = (*queue)->next;
@@ -141,13 +170,136 @@ PROC* dequeue(queue) PROC** queue;
   return p;
 }
 
-int grave(){
-  printf("\n*****************************************\n"); 
-  printf("Task %d %s\n", running->pid,gasp[(running->pid) % 4]);
-  printf("*****************************************\n");
-  running->status = DEAD;
+void enlist(new_proc, list) PROC* new_proc; PROC** list;
+{
+  new_proc->next = *list;
+  *list = new_proc;
+}
 
-  tswitch();   /* journey of no return */        
+PROC* delist (list) PROC** list;
+{
+  PROC* p1 = *list;
+  PROC* p2;
+
+  if (p1 == NULL)
+    return NULL;
+
+  if (p1->next == NULL)
+  {
+    PROC* ret = p1;
+    *list = NULL;
+    return ret;
+  }
+
+  while(p1->next->next != NULL)
+  {
+    p1 = p1->next;
+  }
+
+  {
+    PROC* ret = p1->next;
+    p1->next = NULL;
+    return ret;
+  }
+}
+
+void wakeup(event) int event;
+{
+  if (sleepList == NULL) {
+    return;
+
+  } else {
+    PROC* p1 = sleepList;
+    PROC* p2;
+
+    // edge case: wakeup front of list
+    while (p1 != NULL && p1->event == event)
+    {
+      p1->status = READY;
+      sleepList = p1->next;
+      enqueue(p1, &readyQueue);
+      p1 = sleepList;
+      if (sleepList == NULL)
+        return;
+    }
+
+    p2 = p1->next;
+
+    // go thru rest of list
+    while(p2 != NULL)
+    {
+      if (p2->event == event)
+      {
+        p2->status = READY;
+        enqueue(p2, &readyQueue);
+        p2 = p2->next;
+        p1->next = p2;
+      } else {
+        p1 = p2;
+        p2 = p2->next;
+      }
+    }
+  }
+}
+
+void sleep(event) int event;
+{
+  running->event = event;
+  running->status = SLEEP;
+  printf("sleep() for pid=%d\n", running->pid);
+  
+  // For fairness, put running into a FIFO sleepList so that they will wakeup in order
+  {
+    if (sleepList == NULL) {
+      sleepList = running;
+      running->next = NULL;
+
+    } else {
+      PROC* p1 = sleepList;
+      while(p1->next != NULL)
+      {
+        p1 = p1->next;
+      }
+      p1->next = running;
+      running->next = NULL;
+    }
+  }
+
+  tswitch();
+}
+
+int wait(status) int *status;
+{
+  int child_count = 0;
+  
+  {
+    int i = 0;
+    for (i; i < NPROC; ++i)
+    {
+      if (proc[i].p_pid == running->pid)
+      {
+        child_count++;
+      }
+    }
+  }
+
+  if (child_count == 0)
+     return -1; // ERROR
+
+  while(1){
+    int i;
+    for (i = 0; i < NPROC; ++i)
+    {
+      if (proc[i].status == ZOMBIE && proc[i].p_pid == running->pid)
+      {
+        *status = proc[i].exitValue;
+        proc[i].status = DEAD;
+        return proc[i].pid;
+      }   
+    }
+
+    sleep(running);    // sleep at its own &PROC
+  }
 }
 
 int ps()
@@ -159,29 +311,12 @@ int ps()
   p = running;
   p = p->next;
   printf("readyProcs = ");
+
   while(p != running && p->status==READY){
     printf("%d -> ", p->pid);
     p = p->next;
   }
   printf("\n");
-}
-
-int body()
-{  char c;
-   while(1){
-      ps();
-      printQ();
-
-      printf("I am Proc %d in body()\n", running->pid);
-      printf("Input a char : [s|q|f] \n");
-       c=getc();
-       switch(c){
-            case 's': tswitch(); break;
-            case 'q': grave();   break;
-            case 'f': kfork();   break;
-            default :            break;  
-       }
-   }
 }
 
 /* my function */
@@ -232,6 +367,61 @@ int kfork()
   
     return p->pid;
   }
+}
+
+void kexit()
+{
+  u16 exitValue;
+  printf("Enter an exit value:");
+  exitValue = getc();
+  // - '0';
+  running->exitValue = exitValue;
+  printf("%u\n", exitValue);
+
+  running->status = ZOMBIE;
+
+  {
+    int i;
+    for (i = 0; i < NPROC; ++i)
+    {
+      if (proc[i].p_pid == running->pid) {
+        proc[i].p_pid = proc[1].pid;  // give children to proc1
+      }
+    }
+  }
+
+  printf("\n*****************************************\n"); 
+  printf("Task %d %s\n", running->pid,gasp[(running->pid) % 4]);
+  printf("*****************************************\n");
+  
+  wakeup(&proc[running->p_pid]);
+  tswitch();
+}
+
+int body()
+{  char c;
+   while(1){
+      int status, pid;
+      ps();
+      printQ();
+
+      printf("I am Proc %d in body()\n", running->pid);
+      printf("Input a char : [s|q|f|p|w] \n");
+       c=getc();
+       switch(c){
+            case 's': tswitch();           break;
+            case 'q': kexit();             break;
+            case 'f': kfork();             break;
+            case 'p': printProcStatuses(); break;
+            case 'w': pid = wait(&status);
+                      if (pid < 1)
+                        printf("ERROR - no children\n");
+                      else
+                        printf("dead child pid=%d exitvalue=%d\n", pid, status);
+                      break;
+            default :                      break;  
+       }
+   }
 }
 
 main()
