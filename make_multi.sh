@@ -17,7 +17,7 @@ as86 -o ./build/multi_s.o multi.s
 
 #link
 echo linking
-ld86 -o ./out/multi -d ./build/multi_s.o ./build/multi_c.o /usr/lib/bcc/libc.a
+ld86 -d -o ./out/multi ./build/multi_s.o ./build/multi_c.o /usr/lib/bcc/libc.a
 
 #copy files into image
 echo copy multitasking system to mtximage
