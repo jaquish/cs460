@@ -1,0 +1,18 @@
+PROGRAM STRUCTURE
+-----------------------
+This is a series of small projects. Some are dependent upon each other. There is also a small set of files that are shared across all projects.
+
+lab1 - bootloader - Intended to be copied onto first sector of floppy disk with an OS
+lab2 - loader     - Loader program, given a filepath, copies blocks into data(?) segment
+lab3 - multitask  - A simple multitasking OS with sleep/wait/kexit, process management.
+lab4 - 
+
+
+Other Important Folders
+-----------------------
+
+build  - staging area for building. files have a prefix <lab3>_ and a suffix _<filetype>
+images - saved disk images, which contain professor's (kcw) binaries, empty floppy image
+mp     - mount point for disk images. keep empty, used by make scripts.
+out    - output folder for finished products (lab1.fdd, etc)
+shared - shared code files. bcc uses "-Ishared" flag to add this dir to #include path

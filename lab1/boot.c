@@ -2,8 +2,6 @@ typedef unsigned char u8;
 typedef unsigned int u16;
 typedef unsigned long u32;
 
-//#include "print.h"
-
 #define BLOCK_SIZE 1024
 #define SUPER_BL   1
 #define GROUP_BL   2
@@ -230,8 +228,6 @@ int main()
         inces();
         lp++;
     }
-    
-    
     
     return 1;
 }
