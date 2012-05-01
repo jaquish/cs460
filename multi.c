@@ -371,21 +371,23 @@ int kfork()
 
 void kexit()
 {
+  char c;
   u16 exitValue;
   printf("Enter an exit value:");
-  exitValue = getc();
-  // - '0';
+  c = getc(); // have to grab seperate, no casting of assembly return vals?? // KLUDGE
+  exitValue = c - '0';
   running->exitValue = exitValue;
-  printf("%u\n", exitValue);
+  printf("%d", exitValue);
 
   running->status = ZOMBIE;
 
+  // give children to proc1
   {
     int i;
     for (i = 0; i < NPROC; ++i)
     {
       if (proc[i].p_pid == running->pid) {
-        proc[i].p_pid = proc[1].pid;  // give children to proc1
+        proc[i].p_pid = proc[1].pid;  
       }
     }
   }
@@ -394,6 +396,7 @@ void kexit()
   printf("Task %d %s\n", running->pid,gasp[(running->pid) % 4]);
   printf("*****************************************\n");
   
+  // wake parent
   wakeup(&proc[running->p_pid]);
   tswitch();
 }
@@ -403,7 +406,7 @@ int body()
    while(1){
       int status, pid;
       ps();
-      printQ();
+      // printQ();
 
       printf("I am Proc %d in body()\n", running->pid);
       printf("Input a char : [s|q|f|p|w] \n");
