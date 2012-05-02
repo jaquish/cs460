@@ -154,6 +154,96 @@ int kfork()
   return(p->pid);
 }
 
+int copy_image(segment) u16 segment;
+{
+  int from_segment = (running->pid + 1) * 0x1000;
+  int i;
+  for(i = 0; i < 32768; i++) {
+    put_word(get_word(from_segment, i), segment, i);
+  }
+}
+
+int fork()
+{
+  PROC *p;
+  int  i, child;
+  u16  segment;
+
+  /*** get a PROC for child process: ***/
+  if ( (p = getproc()) == NULL){
+       printf("no more proc\n");
+       return(-1);
+  }
+
+  /* initialize the new proc and its stack */
+  p->status = READY;
+  p->ppid = running->pid;
+  p->parent = running;
+  p->pri  = running->priority;                 // all of the same priority 1
+
+
+  // Kmode stack is still wiped
+  for (i=1; i<10; i++)
+      p->kstack[SSIZE-i] = 0;
+ 
+  // fill in resume address
+  p->kstack[SSIZE-1] = (int)goUmode;  // jump to Umode
+
+  // save stack TOP address in PROC
+  p->ksp = &(p->kstack[SSIZE - 9]);
+
+  enqueue(&readyQueue, p);
+  nproc++;
+
+  {
+    // compute new proc's segment by pid:
+    u16 segment = (p->pid + 1) * 0x1000;
+    u16 seg_size = 0x1000;
+
+    // load to segment
+    copy_image(segment);
+
+    printf("loaded to segment %u\n", segment);
+
+    p->uss = segment;
+    p->usp = running->usp;  // resumes from same point
+
+    // modify return value as if it executed pid=fork() with return value of 0
+    put_word(0, segment, running->usp + 8*2);
+  }
+  
+  printf("Proc %d forked a child %d at segment=%x\n", running->pid, p->pid, segment);
+  
+  return(p->pid);
+}
+
+int exec(filepath) char* filepath;
+{
+  // copy name into buffer
+  // load()
+
+  // fix ustack to execute from beginning of new image
+  {
+    int i;
+    for (i = 1; i < 13; ++i)
+    {
+      u16 word;
+      switch(i) {
+        case 1:   word = 0x0200;  break;  // uFlag
+
+        case 2:
+        case 11:
+        case 12:  word = segment; break;  // uCS, uES, uDS
+
+        default:  word = 0;       break;  // pretty much everything else
+      }
+
+      put_word(word, segment, seg_size-i*2);  // stack starts at highest end of segment
+    }
+  }
+
+  return;
+}
 
 int do_switch()
 { 
