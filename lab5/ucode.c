@@ -69,13 +69,29 @@ int wait()
     printf("\n"); 
 } 
 
+int fork()
+{
+  int r;
+  printf("enter kernel to ufork...\n");
+  r = syscall(6, 0, 0);
+}
+
+int exec()
+{
+  char s[128];
+  printf("\nenter filename:");
+  gets(s);
+  syscall(8,s,0);
+  // no return, image changed
+}
+
 int exit()
 {
    char exitValue;
    printf("\nenter an exitValue (0-9) : ");
    exitValue=getc() - '0';
    printf("enter kernel to die with exitValue=%d\n", exitValue);
-        syscall(6,exitValue,0);
+        syscall(8,exitValue,0);
 }
 
 

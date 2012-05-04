@@ -25,8 +25,10 @@ main()
            case 3 : kmode();    break;
            case 4 : kswitch();  break;
            case 5 : wait();     break;
+           case 6 :
+           case 7 :
 
-           case 6 : exit();      break;
+           case 8 : exit();      break;
 
            default: invalid(name); break;
     }

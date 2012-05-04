@@ -19,7 +19,10 @@ int kcinth()
     case 3 : r = kmode();          break;
     case 4 : r = tswitch();        break;
     case 5 : r = do_wait(b);       break;
-    case 6 : do_exit(b);           break;       
+    case 6 : r = ufork();          break;       
+    case 7 : exec(b);              break;
+    
+    case 8 : do_exit(b);           break;
 
     default: printf("invalid syscall # : %d\n", a);
               break;

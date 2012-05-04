@@ -137,7 +137,7 @@ int kfork()
           case 11:
           case 12:  word = segment; break;  // uCS, uES, uDS
 
-          default:  word = 0;       break;  // pretty much everything else
+          default:  word = 0;       break;  // pretty much everything else, including PC
         }
 
         put_word(word, segment, seg_size-i*2);  // stack starts at highest end of segment
@@ -158,12 +158,12 @@ int copy_image(segment) u16 segment;
 {
   int from_segment = (running->pid + 1) * 0x1000;
   int i;
-  for(i = 0; i < 32768; i++) {
+  for(i = 0; i < 32768; i++) {                        // dumb copy_image doesn't know the size, do all 64KB
     put_word(get_word(from_segment, i), segment, i);
   }
 }
 
-int fork()
+int ufork()
 {
   PROC *p;
   int  i, child;
@@ -220,7 +220,20 @@ int fork()
 int exec(filepath) char* filepath;
 {
   // copy name into buffer
-  // load()
+  char path[128];
+  int i;
+
+  u16 segment =  (running->pid + 1) * 0x1000;
+  u16 seg_size = 0x1000;
+
+  for (i = 0; i < 128; ++i)
+  {
+    path[i] = get_byte(segment, filepath + i);
+    if (path[i] == '\0')
+      break;
+  }
+
+  load(path, segment);
 
   // fix ustack to execute from beginning of new image
   {
