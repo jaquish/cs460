@@ -1,19 +1,34 @@
 char cmdLine[64];
-char inShell[] = "?		help	pwd		cd 		logout";
+
+char *inShell[]={"?", "help", "pwd", "cd", "logout", 0};
+
+int find_cmd(name) char *name;
+{
+   int i=0;   
+   char *p=inShell[0];
+
+   while (p){
+         if (strcmp(p, name)==0)
+            return i;
+         i++;  
+         p = inShell[i];
+   } 
+   return(-1);
+}
 
 #include "ucode.c"
 
-char* name[20];
+char* name_read[20];
 
 void sh_token(line) char* line;
 {
 	int i;
 	
-	name[0] = strtok(line, " ");
+	name_read[0] = strtok(line, " ");
 	
-	for(i = 0; name[i - 1] != 0; i++)
+	for(i = 0; name_read[i - 1] != 0; i++)
 	{
-		name[i] = strtok(0, " ");
+		name_read[i] = strtok(0, " ");
 	}
 }
 
@@ -32,7 +47,7 @@ main (argc, argv) int argc; int argc; char* argv[];
 	int i, j;
 
 	int start;
-	char temp_line[64];	// char long_name[128];
+	char temp_line[64];	// char long_name_read[128];
 	char string[64];
 	char* cp;
 	STAT temp_stat;
@@ -48,6 +63,8 @@ main (argc, argv) int argc; int argc; char* argv[];
 
 	while(1)
 	{
+		int r;
+
 		printf("input command : ");
 		gets(cmdLine);
 		if (cmdLine[0] == 0)
@@ -57,25 +74,28 @@ main (argc, argv) int argc; int argc; char* argv[];
 		sh_token(temp_line);
 
 		// search inShell
-		// int r = search(name[0]);
+		r = find_cmd(name_read[0]);
 		switch(r)
 		{
-			case -1:
 			case 0:
+			case 1:
 				menu();
 				continue;
 
-			case 1:
+			case 2:
 				getcwd(string);
 				printf("%s\n", string);
 				break;
 
-			case 2:
-				chdir(name[1]); 
+			case 3:
+				chdir(name_read[1]); 
 				break;
 
-			case 3:
-				exit(0); 
+			case 4:
+				exit(0);
+
+			default:
+				break;
 		}
 
 		// not a shell command, try to exec() it
@@ -91,22 +111,22 @@ main (argc, argv) int argc; int argc; char* argv[];
 			// child
 			int i;
 			cp = cmdLine;
-			for (i = 0, start = 0; name[i] != 0; i++)
+			for (i = 0, start = 0; name_read[i] != 0; i++)
 			{
 				// upgraded to case
-				switch (name[i][0])
+				switch (name_read[i][0])
 				{
 					case '>':
-						if(name[i][1] == '>')
+						if(name_read[i][1] == '>')
 						{
 							close(1);
-							creat(name[i+1]);
-							open(name[++i], 3);
+							creat(name_read[i+1]);
+							open(name_read[++i], 3);
 
 						} else {
-							creat(name[i+1]);
+							creat(name_read[i+1]);
 							close(1);
-							if (open(name[++i], 1) != stdout)
+							if (open(name_read[++i], 1) != stdout)
 							{
 								write(2, "Failed to create file\n", 23);
 								exit(0);
@@ -115,14 +135,14 @@ main (argc, argv) int argc; int argc; char* argv[];
 						break;
 
 					case '<':
-						stat(name[i + 1], &temp_stat);
+						stat(name_read[i + 1], &temp_stat);
 						if (temp_stat.st_size == 0)
 						{
-							printf("%s doesn't exist\n", name[i+1]);
+							printf("%s doesn't exist\n", name_read[i+1]);
 							exit(0);
 						}
 						close(0);
-						open(name[++i], 0);
+						open(name_read[++i], 0);
 						break;
 
 					case '|':
@@ -130,7 +150,7 @@ main (argc, argv) int argc; int argc; char* argv[];
 						pid = fork();
 						if (pid)
 						{
-							name[i + 1] = '\0';
+							name_read[i + 1] = '\0';
 							close(pipes[0]);
 							close(1);
 							dup2(pipes[1], 1);
@@ -145,8 +165,8 @@ main (argc, argv) int argc; int argc; char* argv[];
 						break;
 
 					default:
-						strcpy(cp, name[i]);
-						cp += strlen(name[i]);
+						strcpy(cp, name_read[i]);
+						cp += strlen(name_read[i]);
 						*(cp++) = ' ';
 				}
 			}
@@ -160,7 +180,7 @@ main (argc, argv) int argc; int argc; char* argv[];
 			write(2, cmdLine, strlen(cmdLine));
 			write(2, "-\n\r", 2);
 
-			printf("child process %d exec to %s\n", getpid(), name[0]);
+			printf("child process %d exec to %s\n", getpid(), name_read[0]);
 			exec(cmdLine);
 			printf("exec() failed\n");
 			exit(1);

@@ -1,4 +1,3 @@
-
 .globl _getcs, _getds,_setds
 .globl _main0,_prints,_syscall,_exit
 
@@ -68,7 +67,6 @@ _setds:
 	mov   sp,bp
 	pop   bp
 	ret
-	
 	
 _syscall:	
 !_int80:

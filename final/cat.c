@@ -2,7 +2,7 @@
 
 #define BUF_SIZE 64
 
-int main(argc, argv) int argcl char* argv[];
+int main(argc, argv) int argc; char* argv[];
 {
 	// expecting: argv[0] "cat", argv[1] is path/to/file
 
@@ -21,7 +21,7 @@ int main(argc, argv) int argcl char* argv[];
 			switch(c)
 			{
 				case '\r': putc('\n');	break;
-				case '\D': exit(0);		break;
+				case '~' : exit(0);		break;
 				default  : putc(c);  	break;
 			}
 		}
@@ -53,6 +53,4 @@ int main(argc, argv) int argcl char* argv[];
 			size_remain -= BUF_SIZE;
 		}
 	}
-
-	// pipe support?
 }

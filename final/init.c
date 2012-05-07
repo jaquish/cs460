@@ -1,5 +1,5 @@
 int pid, tty0_child, ttyS0_child, ttyS1_child, status;
-int stin, stdout;
+int stdin, stdout;
 
 #include "ucode.c"
 
@@ -9,46 +9,73 @@ int main(argc, argv) int argc; char* argv[];
 	stdout = open("/dev/tty0", 1);
 
 	// printf() now possible
-	printf("CGINIT: fork a login process on console\n");
+	printf("ZJINIT: fork a login task on console\n");
+	tty0_child = fork();
 
+	if (tty0_child)
 	{
-		int i;
-		for(i = 0; i < 3; i++);
+		ttyS0_child = fork();
+		if (ttyS0_child)
 		{
-			int r = fork();
-
-			if (r == 0)		// child
-				switch(i)
-				{
-					case 0: exec("login /dev/tty0");
-					case 1: exec("login /dev/ttyS0");
-					case 2: exec("login /dev/ttyS1");
-				}
+			ttyS1_child = fork();
+			if (ttyS1_child)
+			{
+				parent();
+			} else {
+				loginS1();
+			}
+		} else {
+			loginS0();
 		}
+	} else {
+		login();
 	}
+}
 
+int login()
+{
+	exec("login /dev/tty0");
+}
+
+int loginS0()
+{
+	exec("login /dev/ttyS0");
+}
+
+int loginS1()
+{
+	exec("login /dev/ttyS1");
+}
+
+int parent()
+{
 	while(1)
 	{
-		printf("CGINIT : waiting...\n");
-		pid = wait(&status);
+		printf("ZJINIT : waiting...\n");
 
+		pid = wait(&status);
 
 		if ( pid == tty0_child || pid == ttyS0_child || pid == ttyS1_child)
 		{
-			int r;
-			
 			printf("INIT: forking another login");
+
+			if (pid == tty0_child)
+			{
+				tty0_child = fork();
+				if(!tty0_child)
+					login();
+
+			} else if (pid == ttyS0_child) {
+				ttyS0_child = fork();
+				if (!ttyS0_child)
+					loginS0();
 			
-			r = fork();
-
-			if (r == 0)	// child
-				switch(pid)
-				{
-					case tty0_child:  exec("login /dev/tty0");
-					case ttyS0_child: exec("login /dev/ttyS0");
-					case ttyS1_child: exec("login /dev/ttyS1");
-				}
-
+			} else {
+				ttyS1_child = fork();
+				if (!ttyS1_child)
+					loginS1();
+			}
+			
 		} else {
 			printf("INIT: buried an orphan child pid=%d", pid);
 		}

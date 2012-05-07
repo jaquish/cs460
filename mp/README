@@ -1,4 +1,0 @@
-// DO NOT PUT ANYTHING IN THIS FOLDER //
-
-This is the floppy mountpoint used by build scripts.
-Floppy images are mounted to this directory to copy files into the floppy's filesystem.

@@ -1,4 +1,4 @@
-#include <mtx_type.h>
+#include "type.h"
 
 int pid;
 char line[64], pathname[32], i2[32], i3[32];
@@ -284,7 +284,7 @@ int fixtty(char *tty)
    return syscall(40, tty, 0);
 }
 
-int gettty(char *tty)
+int settty(char *tty) // changed from fixtty
 {
    return syscall(41, tty, 0);
 }

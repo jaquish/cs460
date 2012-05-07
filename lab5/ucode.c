@@ -1,6 +1,6 @@
 // ucode.c file
 
-char *cmd[]={"getpid", "ps", "chname", "kmode", "switch", "wait", "exit", 0};
+char *cmd[]={"getpid", "ps", "chname", "kmode", "switch", "wait", "exec", "fork", "exit", 0};
 
 int show_menu()
 {
@@ -81,7 +81,7 @@ int exec()
   char s[128];
   printf("\nenter filename:");
   gets(s);
-  syscall(8,s,0);
+  syscall(7,s,0);
   // no return, image changed
 }
 

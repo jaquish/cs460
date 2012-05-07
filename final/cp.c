@@ -2,7 +2,7 @@
 
 #define BUF_SIZE 64
 
-int main(argc, argv) int argc; char*argv[];
+int main(argc, argv) int argc; char* argv[];
 {
 	int fd1, fd2;
 	STAT info;
@@ -40,16 +40,10 @@ int main(argc, argv) int argc; char*argv[];
 		if (size_remain < BUF_SIZE)
 			copy_size = size_remain;
 
-		read(fd1, buf, BUF_SIZE);
+		read(fd1, buf, copy_size);
 		write(fd2, buf, BUF_SIZE);
 
-
-		if (size_remain < 64)
-			read_size = size_remain;
-
-		read(fd, buf, read_size);
-		buf[read_size] = 0;
-
+		buf[copy_size] = 0;
 		size_remain -= BUF_SIZE;
 	}
 

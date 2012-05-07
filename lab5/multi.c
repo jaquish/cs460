@@ -44,6 +44,7 @@ char *pname[]={"Sun", "Mercury", "Venus", "Earth",  "Mars", "Jupiter",
 #include "wait.c"
 #include "int.c"
 
+int goUmode();
 
 int initialize()
 {
@@ -179,7 +180,7 @@ int ufork()
   p->status = READY;
   p->ppid = running->pid;
   p->parent = running;
-  p->pri  = running->priority;                 // all of the same priority 1
+  p->pri  = running->pri;                 // all of the same priority 1
 
 
   // Kmode stack is still wiped
