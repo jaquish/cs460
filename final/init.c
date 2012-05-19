@@ -9,7 +9,7 @@ int main(argc, argv) int argc; char* argv[];
 	stdout = open("/dev/tty0", 1);
 
 	// printf() now possible
-	printf("ZJINIT: fork a login task on console\n");
+	printf("=== zjaquish init: fork a login task on console\n");
 	tty0_child = fork();
 
 	if (tty0_child)
@@ -51,7 +51,7 @@ int parent()
 {
 	while(1)
 	{
-		printf("ZJINIT : waiting...\n");
+		printf("zjaquish init : waiting...\n");
 
 		pid = wait(&status);
 

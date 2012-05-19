@@ -1,0 +1,25 @@
+# Disk DescriptorFile
+version=1
+encoding="UTF-8"
+CID=29786f1d
+parentCID=ffffffff
+isNativeSnapshot="no"
+createType="twoGbMaxExtentSparse"
+
+# Extent description
+RW 4192256 SPARSE "zrj-s001.vmdk"
+RW 4192256 SPARSE "zrj-s002.vmdk"
+RW 4192256 SPARSE "zrj-s003.vmdk"
+RW 4192256 SPARSE "zrj-s004.vmdk"
+RW 8192 SPARSE "zrj-s005.vmdk"
+
+# The Disk Data Base 
+#DDB
+
+ddb.adapterType = "ide"
+ddb.geometry.sectors = "63"
+ddb.geometry.heads = "16"
+ddb.geometry.cylinders = "16383"
+ddb.uuid = "60 00 C2 98 ed e7 02 59-5c cc 13 09 58 6c 29 83"
+ddb.longContentID = "7d6161134e6646b902d8f59f29786f1d"
+ddb.virtualHWVersion = "8"

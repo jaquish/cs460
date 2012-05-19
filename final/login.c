@@ -1,3 +1,4 @@
+#include "type.h"
 #include "ucode.c"
 
 char*tty;
@@ -25,11 +26,12 @@ main (argc, argv) int argc; char* argv[];
 {
 	char usrname[64], password[64], passbuf[1024];
 	char name[64], home[64], shell[64];
-	int passfd, gid, uid;
+	int gid, uid;
 
 	char* tokens[10];
 	char delim = ':';
 	char* tty = argv[1];
+
 	close(0);
 	close(1);
 	close(2);
@@ -38,23 +40,40 @@ main (argc, argv) int argc; char* argv[];
 	stdout = open(tty, 1);
 	stderr = open(tty, 2);
 
+	printf("fd's for stdin=%d stdout=%d stderr=%d\n", stdin, stdout, stderr);
+
 	while(1)
 	{
-		printf("login: ");
+		STAT s;
+		int size_remain;
+		int passfd = open("/etc/passwd", READ);
+
+		printf("zjaquish login: ");
 		gets(usrname);
-		printf("\n");
 		
 		printf("password: ");
 		gets(password);
 
-		passfd = open("/etc/passwd", 1);
+		stat("/etc/passwd", &s);
+		size_remain = s.st_size;
+
+		printf("size_remain=%d\n", size_remain);
+
 		while(1)
 		{
-			int numRead = getline(passfd, passbuf, 1024);
-			if (numRead == 0)
-				break;
+			int i;
+			for (i = 0; i < 1024 && size_remain > 0; i++)
+			{
+				read(passfd, &passbuf[i], 1);
+				size_remain--;
 
-			tokenize(passbuf, tokens, delim);
+				if (passbuf[i] == '\n') {
+					passbuf[i+1] = '\0';
+					break;
+				}
+			}
+
+			tokenize(passbuf, tokens, ':');
 			if((strcmp(usrname, tokens[0]) == 0 && strcmp(password, tokens[1]) == 0))
 			{
 				gid = atoi(tokens[2]);
@@ -64,9 +83,19 @@ main (argc, argv) int argc; char* argv[];
 				strcpy(shell, tokens[6]);
 				printf("%s %s %d %d %s %s %s \n", usrname, password, gid, uid, name, home, shell);
 				chdir(home);
+
+				//strcpy(shell, "/bin/");
+				//strcat(shell, tokens[6]);
+
 				exec("/bin/sh");
+			} else {
+				printf("user was %s with pw %s \n", tokens[0], tokens[1]);
 			}
+
+			if (size_remain == 0)
+				break;
 		}
 		close(passfd);
 	}
+	
 }

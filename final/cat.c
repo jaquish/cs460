@@ -1,56 +1,70 @@
 #include "type.h"
+#include "ucode.c"
 
 #define BUF_SIZE 64
 
 int main(argc, argv) int argc; char* argv[];
 {
 	// expecting: argv[0] "cat", argv[1] is path/to/file
-
-	int i;
 	
-	
-
-	write(2, "In Zach's cat\n\r", 15);
+	write(2, "=== zjaquish cat ===\n\r", 22);
 
 	if (argc == 1)
 	{
+		// interactive mode
 		while(1)
 		{
 			char c = getc();
 
 			switch(c)
 			{
-				case '\r': putc('\n');	break;
+				case '\r': putc('\n');  putc('\r');	break;
 				case '~' : exit(0);		break;
 				default  : putc(c);  	break;
 			}
 		}
-		
-	}
+	
+	} else {
+		int i;
+		// can cat a list of files
 
-	for(i = 1; i < argc + 1; i++)
-	{
-		STAT info;
-		char buf[BUF_SIZE + 1];
-		int size_remain;
-		
-		int fd = open(argv[i], 0);
-		stat(argv[1], &info);
-
-		size_remain = info.st_size;
-		while(size_remain > 0)
+		for(i = 1; i < argc; i++)
 		{
-			int read_size = BUF_SIZE;
+			char buf[BUF_SIZE];
+			STAT info;
+			int bytes_left;
+			
+			int fd = open(argv[i], 0);
 
-			printf("%s\n", buf);
+			printf("fd=%d\n", fd);
 
-			if (size_remain < BUF_SIZE)
-				read_size = size_remain;
+			stat(argv[1], &info);
+			bytes_left = info.st_size;
 
-			read(fd, buf, read_size);
-			buf[read_size] = 0;
+			while(bytes_left > 0)
+			{
+				int j;
+				int read_size = BUF_SIZE;
 
-			size_remain -= BUF_SIZE;
+				if (bytes_left < BUF_SIZE)
+					read_size = bytes_left;
+
+				read(fd, buf, read_size);
+
+				for(j = 0; j < read_size; j++)
+				{
+					char c = buf[j];
+					switch(c)
+					{
+						case '\n': putc('\n');  putc('\r');	break;
+						default  : putc(c);  	break;
+					}
+				}
+
+				bytes_left -= read_size;
+			}
+			close(fd);
 		}
+		exit(0);
 	}
 }

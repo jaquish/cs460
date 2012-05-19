@@ -1,3 +1,5 @@
+#include "type.h"
+
 char cmdLine[64];
 
 char *inShell[]={"?", "help", "pwd", "cd", "logout", 0};
@@ -67,6 +69,7 @@ main (argc, argv) int argc; int argc; char* argv[];
 
 		printf("input command : ");
 		gets(cmdLine);
+		printf("cmdLine=%s\n", cmdLine);
 		if (cmdLine[0] == 0)
 			continue;
 
@@ -111,6 +114,9 @@ main (argc, argv) int argc; int argc; char* argv[];
 			// child
 			int i;
 			cp = cmdLine;
+
+			printf("cmdLine=%s\n", cmdLine);
+
 			for (i = 0, start = 0; name_read[i] != 0; i++)
 			{
 				// upgraded to case
@@ -174,13 +180,12 @@ main (argc, argv) int argc; int argc; char* argv[];
 			*(cp-1) = 0;
 
 			/* DEBUG CODE */
-			printf("test\n");
-
 			write(2, "cmdLine: -", 10);
 			write(2, cmdLine, strlen(cmdLine));
 			write(2, "-\n\r", 2);
 
 			printf("child process %d exec to %s\n", getpid(), name_read[0]);
+			printf("cmdLine=%s\n", cmdLine);
 			exec(cmdLine);
 			printf("exec() failed\n");
 			exit(1);

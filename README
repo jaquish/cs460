@@ -1,18 +1,51 @@
-PROGRAM STRUCTURE
+ABOUT
+-----------------------
+This is my work for CptS 460 – Operating Systems, taught by K.C. Wang (KCW) at Washington State University. It consists of a series of "labs" demonstrating pieces of the MTX kernel (a Minix-derived OS developed by KCW) and a final project. This repo is currently public for prospective employers.
+
+Course Syllabus: http://eecs.wsu.edu/~cs460/
+
+
+
+PROJECT STRUCTURE
 -----------------------
 This is a series of small projects. Some are dependent upon each other. There is also a small set of files that are shared across all projects.
 
-lab1 - bootloader - Intended to be copied onto first sector of floppy disk with an OS
-lab2 - loader     - Loader program, given a filepath, copies blocks into data(?) segment
-lab3 - multitask  - A simple multitasking OS with sleep/wait/kexit, process management.
-lab4 - 
+build/  - staging area for building. files have a prefix <lab3>_ and a suffix _<filetype>
+
+lab1/   - bootloader - Intended to be copied onto first sector of floppy disk with an OS
+lab2/   - loader     - Loader program, given a filepath, copies blocks into data(?) segment
+lab3/   - multitask  - A simple multitasking OS with sleep/wait/kexit, process management.
+lab4/   -
+lab5/   -
+timer/  -
+final/  -
+shared/ - shared code files. bcc uses "-Ishared" flag to add this dir to #include path
+
+kcw_bin/ - bin directory from mtxCD.iso  Copy KCW bin files back to dev image to quickly compare
+kcw_etc/ - etc directory from mtxCD.iso, contains pw file.
+		   Sometimes /etc was corrupted, this a backup
+
+images/ - saved disk images, which contain professor's (kcw) binaries, empty floppy image
+mp/     - mount point for disk images. keep empty, used by make scripts.
+other/  - random projects created during development, simple tests, sizeof() exploration
+out/    - output folder for finished products (lab1.fdd, etc)
+
+clean.sh         - completely erase build/, out/, and unmount mp/
+copy_to_final.sh - with 0 arguments, copy all my files from out/bin to dev disk image
+				   with 1 argument (ie. "cat") copy bin/$1 to dev disk image
+helper.sh        - takes 1 argument, builds that bin but does not copy into dev disk image
+make_lab<#>.sh   - run shell script to build lab<#> and place output in out/
+make_labfinal.sh - run helper.sh for all 7 bin programs
+restore_kcw.sh   - copy KCW bin files back to dev disk image
+
+*dev disk image refers to the filesystem mounted at /mp, you must do this beforehand
 
 
-Other Important Folders
+
+PROJECT DEVELOPMENT
 -----------------------
+This project and its components are intended to be run on an x86 processor in real mode (from boot). Since real mode only supports 16-bit instructions, a compiler that supports 16-bit output is required. I used Bruce's C Compiler (bcc) and the as86 assembler.
 
-build  - staging area for building. files have a prefix <lab3>_ and a suffix _<filetype>
-images - saved disk images, which contain professor's (kcw) binaries, empty floppy image
-mp     - mount point for disk images. keep empty, used by make scripts.
-out    - output folder for finished products (lab1.fdd, etc)
-shared - shared code files. bcc uses "-Ishared" flag to add this dir to #include path
+I used VMware Fusion to run Linux Mint for development (since OS X does not have native support for ext2 filesystems) and to boot the disk images for faster development turnaround.
+
+KCW provided working binary versions of each lab in the form of a disk image. As part of the build process, a lab is copied over the KCW version. For example, for the bootstrapper lab, I started with KCW's disk image (images/mtximage.fdd) and overwrote the first block to replace his bootstrapper with mine. Similarly, the other labs copy themselves into a disk image. The final project uses the mtx install CD (images/mtxCD.iso).

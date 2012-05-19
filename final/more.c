@@ -1,13 +1,24 @@
 #include "type.h"
+#include "ucode.c"
+
+
+/*
+		more commands
+ *	
+ 	space - print 1 page
+ 	enter - print 1 line
+ 	any key - print 1 char
+ */
 
 int main(argc, argv) int argc; char* argv[];
 {
-	int fd;
 	STAT info;
 	char line[128];
-	int size_remain, iter;
+	int size_remain;
 	char tempc;
 	char charVar;
+
+	int fd = open(argv[1], 0);
 
 	printf("zjaquish more\n");
 
@@ -17,35 +28,81 @@ int main(argc, argv) int argc; char* argv[];
 		exit(1);
 	}
 
-	fd = open(argv[1], 0);
 	stat(argv[1], &info);
 
 	size_remain = info.st_size;
-	while(size_remain > 0)
+
+	printf("got file with fd=%d size_remain=%d\n", fd, size_remain);
+
+	if (size_remain == 0)
+		exit(0);
+
+	while(1)
 	{
-		// get a line
-		for(iter = 0; size_remain > 0 && charVar != '\n'; iter++)
+		int h;
+
+		// print a page, assume 24 high, 80 wide
+		printpage:
+
+		for(h = 0; h < 24; h++)
 		{
-			read(fd, &charVar, 1);
-			line[iter] = charVar;
-			size_remain--;
+			int w;
+			for(w = 0; w < 80; w++)
+			{
+				char c;
+
+				read(fd, &c, 1);
+				putc(c);
+
+				size_remain--;
+
+				if (size_remain == 0)
+					exit(0);
+
+				if (c == '\n' || c == '\r')
+					break;	// end of line
+			}
 		}
 
-		if (line[iter] == '\n')
-		{
-			line[iter + 1] = 0;
-		} else {
-			line[iter] = 0;
+		// get user input
+		while(1) {
+			char c = getc();
+			switch(c)
+			{
+				case 'q':
+					close(fd);
+					exit(0);
+
+				case '\r':
+					// print a line
+					{
+						int w;
+						for(w = 0; w < 80; w++)
+						{
+							char c;
+
+							read(fd, &c, 1);
+							putc(c);
+
+							size_remain--;
+
+							if (size_remain == 0)
+								exit(0);
+
+							if (c == '\n' || c == '\r')
+								break;	// end of line
+						}
+					}
+					break;
+					
+
+				case ' ': goto printpage;	// go back to print another page
+
+				default:
+					read(fd, &c, 1);
+					putc(c);
+					size_remain--;
+			}
 		}
-
-		// Wait for enter
-		charVar = 0;
-		while(charVar != '\r' && charVar != 'q')
-			charVar = getc();
-		if (charVar == 'q')
-			exit(0);
-
-		printf("%s", line);
 	}
-	close(fd);
 }

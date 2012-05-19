@@ -1,17 +1,17 @@
 #include "type.h"
+#include "ucode.c"
 
 main(argc, argv) int argc; char* argv[];
 {
-	int fd;
 	STAT info;
-	char line[128];
-	int size_remain, iter;
-	char tempc;
+	
+	int size_remain;
 	char charVar;
-	int pattern_len;
 
-	printf("zjaquish grep\n");
-	printf("argc: %d\n", argc);
+	int fd = open(argv[2], 0);
+	int pattern_len = strlen(argv[1]);
+
+	printf("=== zjaquish grep ===\n");
 
 	if (argc != 3)
 	{
@@ -19,40 +19,49 @@ main(argc, argv) int argc; char* argv[];
 		exit(-1);
 	}
 
-	fd = open(argv[2], 0);
 	stat(argv[2], &info);
-	pattern_len = strlen(argv[1]);
 
 	size_remain = info.st_size;
-	while(size_remain > 0)
+
+	printf("grep pattern=%s len=%d\n", argv[1], pattern_len);
+	while(1)
 	{
-		for(iter = 0, charVar = 0; size_remain > 0 && charVar != '\n'; iter++)
+		char line[129];
+		int i;
+
+		// load buffer
+		for(i = 0; i < 128; i++)
 		{
-			read(fd, &charVar, 1);
-			line[iter] = charVar;
+			read(fd, &line[i], 1);	// get a char
 			size_remain--;
-		}
 
-		if (line[iter] == '\n')
-			line[iter + 1] == '\0';
-		else
-			line[iter] = 0;
-
-		for(iter = 0; iter <= strlen(line) - pattern_len; iter++)
-		{
-			charVar = line[pattern_len + iter];
-			line[pattern_len + iter] = 0;
-
-			if (strcmp(argv[1], line + iter) == 0)
+			if (line[i] == '\n' || size_remain == 0)
 			{
-				line[pattern_len + iter] = charVar;
-				printf("%s\n", line);
+				line[i+1] = '\0';
 				break;
 			}
+		}
 
-			line[pattern_len + iter] = charVar;
+		// bug: if line is longer than 128 chars..., undefined behavior
+
+		// search buffer
+		{
+			char* cp = line;
+			while(*cp != '\n')
+			{
+				// printf("cp=%s argv[1]=%s pattern_len=%d\n", cp, argv[1], pattern_len);
+				if(strncmp(cp, argv[1], pattern_len) == 0)
+				{
+					printf("%s\n\r", line);
+					break;
+				}
+				cp++;
+			}
+		}
+
+		if (size_remain == 0) {
+			close(fd);
+			exit(0);
 		}
 	}
-
-	close(fd);
 }
