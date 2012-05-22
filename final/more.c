@@ -3,10 +3,10 @@
 
 
 /*
-		more commands
- *	
- 	space - print 1 page
- 	enter - print 1 line
+	Interactive Commands
+	----------------------
+ 	space   - print 1 page
+ 	enter   - print 1 line
  	any key - print 1 char
  */
 

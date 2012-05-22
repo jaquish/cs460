@@ -5,6 +5,7 @@
 
 int main(argc, argv) int argc; char* argv[];
 {
+	printf("=== zjaquish cp ===")
 	if (argc != 3)
 	{
 		printf("cp filename filename\n");
